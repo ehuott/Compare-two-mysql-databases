@@ -32,8 +32,9 @@ our $server02User = 'root';
 our $server02Pass = 'root';
 our $server02Instance = 'db2';
 
-our $checkDataForMaxRows = 1000;
+our $checkDataForMaxRows = 100;
 our $showFullDiffreneces = 1;
+our $columnLenght = 60;
 
 our $server01Dbh = DBI->connect("DBI:mysql:dbname=$server01Instance;host=$server01Host;port=$server01Port", $server01User, $server01Pass, {'RaiseError' => 1});
 our $server02Dbh = DBI->connect("DBI:mysql:dbname=$server02Instance;host=$server02Host;port=$server02Port", $server02User, $server02Pass, {'RaiseError' => 1});
@@ -47,7 +48,7 @@ our @tablesToVerify = ();
 
 @tablesToVerify = dbSchemaVerification();
 dbTablesVerification(@tablesToVerify);
-dbCheckValues(@tablesToVerify);
+#dbCheckValues(@tablesToVerify);
 
 
 $server01Dbh->disconnect();
@@ -102,7 +103,7 @@ sub dbCheckValues {
 		$query = "SELECT concat($columnName,'-',md5(CONCAT($columnsToSelect))) as c FROM $tableName ORDER BY $columnName DESC";
 		
 		if($server01Count != $server02Count) {
-			print "ERROR: Detected a difference in the number of rows in the table: $tableName: Server 01: $server01Count rows, Server 02: $server02Count rows\n";
+			print "INFO: Detected a difference in the number of rows in the table: $tableName: Server 01: $server01Count rows, Server 02: $server02Count rows\n";
 			$query .= "";
 		}elsif( ($server01Count == $server02Count) && ($server01Count > $checkDataForMaxRows) ) {
 			print "WARNINGS: In the table $tableName is more then $checkDataForMaxRows rows\n";
@@ -150,6 +151,7 @@ sub dbCheckValues {
 			print "Rows which appear at least once in either the first or the second list, but not both: \n";
 			for my $e (@LorRonly) {
 				my $rowIdValue = substr($e, 0, index($e, '-'));
+                $rowIdValue = "'".$rowIdValue."'";
 				if (!(any { $_ eq $rowIdValue} @recordIdsWithDiff)) {
 					push(@recordIdsWithDiff, $rowIdValue);
 				}
@@ -162,8 +164,8 @@ sub dbCheckValues {
             print "GENERATE CSV file with differences. Files: $csvFileNameS01 and $csvFileNameS02\n";
             $query = "SELECT * FROM $tableName WHERE $columnName IN \($recordIdsWithDiffStr\)";
             #print $query."\n";
-            system("echo '$query' |mysql -h$server01Host -p$server01Pass -u$server01User -P$server01Port -D$server01Instance > $csvFileNameS01");
-            system("echo '$query' |mysql -h$server02Host -p$server02Pass -u$server02User -P$server02Port -D$server02Instance > $csvFileNameS02");
+            system("echo \"$query\" |mysql -h$server01Host -p$server01Pass -u$server01User -P$server01Port -D$server01Instance > $csvFileNameS01");
+            system("echo \"$query\" |mysql -h$server02Host -p$server02Pass -u$server02User -P$server02Port -D$server02Instance > $csvFileNameS02");
 		}
 		
 	}
@@ -209,6 +211,7 @@ sub dbTablesVerification {
 		'server02' => {}
 	);
 	
+    printf "%-30s|%-30s|%-".$columnLenght."s|%-".$columnLenght."s\n", "TABLE NAME","COLUMN NAME","Server 01","Server 02";
 	for my $i (0..$#tableList) {
 		my $tableName = $tableList[$i];
 		while( my ($serverName,@serverData) = each(%serversData)) {
@@ -226,7 +229,7 @@ sub dbTablesVerification {
 			foreach my $row (@$statement_ref) {
 				my ($columnName, $ordinalPosition, $columnDefault, $isNullable, $dataType, $character, $columnType, $columnKey, $extra) = @$row;
                 #$columns{$serverName}{$tableName}{$columnName} = ($columnName." | ".$ordinalPosition." | ".$columnDefault." | ".$isNullable." | ".$dataType." | ".$character." | ".$columnType." | ".$columnKey." | ".$extra);
-                $columns{$serverName}{$tableName}{$columnName} = sprintf "%-30s|%-5s|%-30s|%-5s|%-10s|%-10s|%-20s|%-10s|%-10s\n", $columnName,$ordinalPosition,$columnDefault,$isNullable,$dataType,$character,$columnType,$columnKey,$extra;
+                $columns{$serverName}{$tableName}{$columnName} = $columnName."|".$ordinalPosition."|".$columnDefault."|".$isNullable."|".$dataType."|".$character."|".$columnType."|".$columnKey."|".$extra;
 			}
 		}
 		my $tableVeryficationServer01 = "";
@@ -238,32 +241,47 @@ sub dbTablesVerification {
 			$tableVeryficationServer02 .= $columns{'server02'}{$tableName}{$key};
 		}
 		if($tableVeryficationServer01 ne $tableVeryficationServer02) {
-			print "ERROR: The difference from $tableName was detected:\n";
-			printf "%-30s|%-5s|%-30s|%-5s|%-10s|%-10s|%-20s|%-10s|%-10s\n", "COLUMN_NAME", "POS","COLUMN_DEFAULT","null?","DATA_TYPE","MAX LENGTH","COLUMN_TYPE","COLUMN_KEY","EXTRA";
-			print "Server 01:\n";
-			foreach my $key (keys %{$columns{'server01'}{$tableName}}) {
-				print $columns{'server01'}{$tableName}{$key};
+			my %tableColsSer01 = %{$columns{'server01'}{$tableName}};
+			my %tableColsSer02 = %{$columns{'server02'}{$tableName}};
+            my %ccc = (%tableColsSer01, %tableColsSer02);
+			foreach my $key (keys %ccc) {
+                if(not defined $key) {next;}
+                if(not defined $tableColsSer01{$key} && defined $tableColsSer02{$key}) {
+                    printf "%-30s|%-30s|%-".$columnLenght."s|%-".$columnLenght."s\n", $tableName, $key, "-", getInfoAboutColumn($tableColsSer02{$key});
+                } elsif(not defined $tableColsSer01{$key} && defined $tableColsSer02{$key}) {
+                    printf "%-30s|%-30s|%-".$columnLenght."s|%-".$columnLenght."s\n", $tableName, $key, getInfoAboutColumn($tableColsSer02{$key}), "-";
+                } elsif($tableColsSer01{$key} ne $tableColsSer02{$key}) {
+                    printf "%-30s|%-30s|%-".$columnLenght."s|%-".$columnLenght."s\n", $tableName, $key, getInfoAboutColumn($tableColsSer01{$key}), getInfoAboutColumn($tableColsSer02{$key});
+                }
 			}
-			print "\nServer 02:\n";
-			foreach my $key (keys %{$columns{'server02'}{$tableName}}) {
-				print $columns{'server02'}{$tableName}{$key};
-			}
-			print "\n";
+            #print "\n";
 		} else {
-			print "CHECK for $tableName: OK! \n";
+            #print "CHECK for $tableName: OK! \n";
 		}
 	}
 	
 	print "Columns Schema verification: DONE\n";
 }
 
+sub getInfoAboutColumn{
+    my $strColumnInfo = shift;
+    my $result = '';
+
+    if(not defined $strColumnInfo) {
+        $result = " - ";
+    } else {
+        my @s = split(/\|/, $strColumnInfo);
+        $result = "Def: $s[6], Default: $s[2], IsNull: $s[3]";
+    }
+    return $result;
+}
 
 # 
 # Get informationa about all tables from information_schema.tables
 #
 sub dbSchemaVerification {
 	print "######################################\n";
-	print "Table Schema verification: START\n";
+	print "Table Schema verification: START\n\n";
 	my %tables = (
 		'server01' => {}, 
 		'server02' => {}
@@ -282,15 +300,16 @@ sub dbSchemaVerification {
 		my $statement_ref = $statement->fetchall_arrayref();
 		foreach my $row (@$statement_ref) {
 			my ($tableName, $tableType, $engine, $rowFormat, $tableCollation) = @$row;
-			$tables{$serverName}{$tableName} = ([$tableName, $tableType, $engine, $rowFormat, $tableCollation]);
+            my @a = ($tableType, $engine, $rowFormat, $tableCollation);
+			@{$tables{$serverName}{$tableName}} = @a;
 			if (!(any { $_ eq $tableName} @allUniqueTablesOnServers)) {
 				push(@allUniqueTablesOnServers, $tableName);
 			} 
 		}
 	}
-	
-	if(length $tables{'server01'} != length $tables{'server02'}) {
-		print "There is diffrent between database schemas ! \n";
+	if($tables{'server01'} != $tables{'server02'}) {
+        printf "%-50s|%-50s|%-50s\n", "TABLE NAME", "Server 01 (".$serversData{'server01'}[0].")", "Server 02 (".$serversData{'server02'}[0].")";
+        print (("-" x 150)."\n");
 	}
 	
 	# check tables with them options
@@ -298,31 +317,26 @@ sub dbSchemaVerification {
 		my $tableName = $allUniqueTablesOnServers[$i];
 		
 		# check server01
-		my @server01ForTable = @{$tables{'server01'}{$tableName}};
-		
-		# check server02
-		my @server02ForTable = @{$tables{'server02'}{$tableName}};
-		
-		if(!@server01ForTable) {
-			print "ERROR: Table $tableName desn't exist on server01!\n";
-		} elsif(!@server01ForTable) {
-			print "ERROR: Table $tableName desn't exist on server02!\n";
-		} else {
+        if( not defined @{$tables{'server01'}{$tableName}}){
+            my @propertis = @{$tables{'server02'}{$tableName}};
+            my $propertisStr = join(", ", @propertis );
+            printf "%-50s|%-50s|%-50s\n", $tableName, "DOESN'T EXIST", $propertisStr;
+            next;
+        } elsif(not defined @{$tables{'server02'}{$tableName}}) {
+            my @propertis = @{$tables{'server01'}{$tableName}};
+            my $propertisStr = join(", ", @propertis );
+            printf "%-50s|%-50s|%-50s\n", $tableName, $propertisStr, "DOESN'T EXIST";
+            next;
+        } else {
+		    my @server01ForTable = @{$tables{'server01'}{$tableName}};
+		    my @server02ForTable = @{$tables{'server02'}{$tableName}};
 			my $tablePropertisServer01 = join(", ", @server01ForTable);
-			#print "$tablePropertisServer01\n";
 			my $tablePropertisServer02 = join(", ", @server02ForTable);
-			if($tablePropertisServer01 ne $tablePropertisServer02) {
-				print "ERROR: Check table schemas on servers, difference was detected:\n";
-				print "Compared data: TABLE_NAME, TABLE_TYPE, ENGINE, ROW_FORMAT, TABLE_COLLATION\n";
-				print "Server 01: $tablePropertisServer01\n";
-				print "Server 02: $tablePropertisServer02\n";
-			} else {
-				print "Check for $tableName: OK! \n";
-			}
-			
-			# store information about tables to check columns
 			push(@tableToCheck, $tableName);
-		}
+			if($tablePropertisServer01 ne $tablePropertisServer02) {
+                printf "%-50s|%-50s|%-50s\n", $tableName, $tablePropertisServer01, $tablePropertisServer02;
+            }
+        }
 	}
 	print "Table Schema verification: DONE\n";
 	#print join(",", @tableToCheck)."\n";
