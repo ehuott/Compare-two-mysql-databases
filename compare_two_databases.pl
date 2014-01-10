@@ -48,7 +48,7 @@ our @tablesToVerify = ();
 
 @tablesToVerify = dbSchemaVerification();
 dbTablesVerification(@tablesToVerify);
-#dbCheckValues(@tablesToVerify);
+dbCheckValues(@tablesToVerify);
 
 
 $server01Dbh->disconnect();
@@ -260,7 +260,7 @@ sub dbTablesVerification {
 		}
 	}
 	
-	print "Columns Schema verification: DONE\n";
+	print "\n\nColumns Schema verification: DONE\n\n";
 }
 
 sub getInfoAboutColumn{
@@ -338,7 +338,7 @@ sub dbSchemaVerification {
             }
         }
 	}
-	print "Table Schema verification: DONE\n";
+    print "\n\nTable Schema verification: DONE\n\n";
 	#print join(",", @tableToCheck)."\n";
 	return @tableToCheck;
 }
