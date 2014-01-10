@@ -7,13 +7,13 @@ Requires
 
 1. Perl:
 
-strict - Perl pragma to restrict unsafe constructs
-warnings - Perl pragma to control optional warnings
-English - use nice English (or awk) names for ugly punctuation variables
-DBI - the standard database interface module for Perl
-Date::Simple - a simple date object
-List::MoreUtils - Provide the stuff missing in List::Util
-List::Compare - Compare elements of two or more lists
+[x] strict - Perl pragma to restrict unsafe constructs
+[x] warnings - Perl pragma to control optional warnings
+[x] English - use nice English (or awk) names for ugly punctuation variables
+[x] DBI - the standard database interface module for Perl
+[x] Date::Simple - a simple date object
+[x] List::MoreUtils - Provide the stuff missing in List::Util
+[x] List::Compare - Compare elements of two or more lists
 
 2. Database
 
