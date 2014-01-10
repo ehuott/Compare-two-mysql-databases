@@ -23,7 +23,7 @@ You need a user with minimum SELECT priviles to both databases.
 
 Example output format
 
-[code]
+```
 
 ∴ perl compare_two_databases.pl
 ######################################
@@ -62,11 +62,11 @@ Column name: c1, values: '4','5'
 GENERATE CSV file with differences. Files: db1_s01_for_t1.csv and db2_s02_for_t1.csv
 Data value verification: DONE
 
-[code]
+```
 
 Two new files are generated with differences:
 
-[code]
+```
 
 ∴ ll
 drwxr-xr-x 3 ela ela  4096 2014-01-10 11:07 ./
@@ -75,5 +75,5 @@ drwxr-xr-x 3 ela ela  4096 2014-01-08 13:28 ../
 -rw-r--r-- 1 ela ela    33 2014-01-10 11:06 db1_s01_for_t1.csv
 -rw-r--r-- 1 ela ela    57 2014-01-10 11:06 db2_s02_for_t1.csv
 
-[code]
+```
 
