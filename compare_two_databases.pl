@@ -319,30 +319,31 @@ sub dbSchemaVerification {
 		my $tableName = $allUniqueTablesOnServers[$i];
 		
 		# check server01
-        if( not defined @{$tables{'server01'}{$tableName}}){
-            my @propertis = @{$tables{'server02'}{$tableName}};
-            my $propertisStr = join(", ", @propertis );
-            printf "%-50s|%-50s|%-50s\n", $tableName, "DOESN'T EXIST", $propertisStr;
-            next;
-        } elsif(not defined @{$tables{'server02'}{$tableName}}) {
-            my @propertis = @{$tables{'server01'}{$tableName}};
-            my $propertisStr = join(", ", @propertis );
-            printf "%-50s|%-50s|%-50s\n", $tableName, $propertisStr, "DOESN'T EXIST";
-            next;
-        } else {
-		    my @server01ForTable = @{$tables{'server01'}{$tableName}};
-		    my @server02ForTable = @{$tables{'server02'}{$tableName}};
+        	unless($tables{'server01'}{$tableName}){
+            		my @propertis = @{$tables{'server02'}{$tableName}};
+            		my $propertisStr = join(", ", @propertis );
+            		printf "%-50s|%-50s|%-50s\n", $tableName, "DOESN'T EXIST", $propertisStr;
+            		next;
+        	} 
+		unless($tables{'server02'}{$tableName}) {
+            		my @propertis = @{$tables{'server01'}{$tableName}};
+            		my $propertisStr = join(", ", @propertis );
+            		printf "%-50s|%-50s|%-50s\n", $tableName, $propertisStr, "DOESN'T EXIST";
+            		next;
+        	} 
+		if($tables{'server01'}{$tableName} and $tables{'server02'}{$tableName}) {
+			my @server01ForTable = @{$tables{'server01'}{$tableName}};
+			my @server02ForTable = @{$tables{'server02'}{$tableName}};
 			my $tablePropertisServer01 = join(", ", @server01ForTable);
 			my $tablePropertisServer02 = join(", ", @server02ForTable);
 			push(@tableToCheck, $tableName);
 			if($tablePropertisServer01 ne $tablePropertisServer02) {
-                printf "%-50s|%-50s|%-50s\n", $tableName, $tablePropertisServer01, $tablePropertisServer02;
-            }
-        }
+            			printf "%-50s|%-50s|%-50s\n", $tableName, $tablePropertisServer01, $tablePropertisServer02;
+            		}
+        	}
 	}
     print "\n\nTable Schema verification: DONE\n\n";
 	#print join(",", @tableToCheck)."\n";
 	return @tableToCheck;
 }
-
 
