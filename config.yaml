@@ -1,0 +1,13 @@
+---
+server_1:
+  host: 127.0.0.1
+  port: 3306
+  username: root
+  password: root
+  instance_name: test
+server_2:
+  host: 127.0.0.1
+  port: 3306
+  username: root
+  password: root
+  instance_name: test2
