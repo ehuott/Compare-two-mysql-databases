@@ -11,6 +11,7 @@ use DBI;
 use Date::Simple;
 use List::MoreUtils qw/ any /;
 use List::Compare;
+use YAML::XS qw/LoadFile/;
 
 # disabling output buffering
 $| = 1;
@@ -18,26 +19,27 @@ $| = 1;
 ##########################################
 # DATABASE connection
 ##########################################
-#$dbConnConditionFilePath = $ARGV[0] || "-";;
+my $defaultConfigFile = "config.yaml";
+my $configFilePath = $ARGV[0] || $defaultConfigFile;
+my $config = LoadFile($configFilePath);
 
-our $server01Host = '127.0.0.1';
-our $server01Port = '3307';
-our $server01User = 'root';
-our $server01Pass = 'root';
-our $server01Instance = 'db1';
-
-our $server02Host = '127.0.0.1';
-our $server02Port = '3307';
-our $server02User = 'root';
-our $server02Pass = 'root';
-our $server02Instance = 'db2';
+our $server01Instance = $config->{'server_1'}->{'instance_name'};
+our $server02Instance = $config->{'server_2'}->{'instance_name'};
 
 our $checkDataForMaxRows = 100;
 our $showFullDiffreneces = 1;
 our $columnLenght = 60;
 
-our $server01Dbh = DBI->connect("DBI:mysql:dbname=$server01Instance;host=$server01Host;port=$server01Port", $server01User, $server01Pass, {'RaiseError' => 1});
-our $server02Dbh = DBI->connect("DBI:mysql:dbname=$server02Instance;host=$server02Host;port=$server02Port", $server02User, $server02Pass, {'RaiseError' => 1});
+our $server01Dbh = DBI->connect(
+	"DBI:mysql:dbname=$server01Instance;host=$config->{'server_1'}->{'host'};port=$config->{'server_1'}->{'port'}", 
+	$config->{'server_1'}->{'username'}, 
+	$config->{'server_1'}->{'password'}, 
+	{'RaiseError' => 1});
+our $server02Dbh = DBI->connect(
+	"DBI:mysql:dbname=$server02Instance;host=$config->{'server_2'}->{'host'};port=$config->{'server_2'}->{'port'}", 
+	$config->{'server_2'}->{'username'}, 
+	$config->{'server_2'}->{'password'}, 
+	{'RaiseError' => 1});
 
 our %serversData = (
 	'server01' => [$server01Instance, $server01Dbh], 
@@ -164,8 +166,8 @@ sub dbCheckValues {
             print "GENERATE CSV file with differences. Files: $csvFileNameS01 and $csvFileNameS02\n";
             $query = "SELECT * FROM $tableName WHERE $columnName IN \($recordIdsWithDiffStr\)";
             #print $query."\n";
-            system("echo \"$query\" |mysql -h$server01Host -p$server01Pass -u$server01User -P$server01Port -D$server01Instance > $csvFileNameS01");
-            system("echo \"$query\" |mysql -h$server02Host -p$server02Pass -u$server02User -P$server02Port -D$server02Instance > $csvFileNameS02");
+            system("echo \"$query\" |mysql -h$config->{'server_1'}->{'host'} -p$config->{'server_1'}->{'password'} -u$config->{'server_1'}->{'username'} -P$config->{'server_1'}->{'port'} -D$config->{'server_1'}->{'instance_name'} > $csvFileNameS01");
+            system("echo \"$query\" |mysql -h$config->{'server_2'}->{'host'} -p$config->{'server_2'}->{'password'} -u$config->{'server_2'}->{'username'} -P$config->{'server_2'}->{'port'} -D$config->{'server_2'}->{'instance_name'} > $csvFileNameS02");
 		}
 		
 	}
