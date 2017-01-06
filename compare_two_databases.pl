@@ -26,7 +26,7 @@ my $config = LoadFile($configFilePath);
 our $server01Instance = $config->{'server_1'}->{'instance_name'};
 our $server02Instance = $config->{'server_2'}->{'instance_name'};
 
-our $checkDataForMaxRows = 100;
+our $checkDataForMaxRows = 1000;
 our $showFullDiffreneces = 1;
 our $columnLenght = 60;
 
@@ -88,14 +88,11 @@ sub dbCheckValues {
 		my $tableName = $tableList[$i];
 		print "TABLE NAME: $tableName \n";
 		my $columnName = $tablesWithPrimaryKeyColumns{$tableName};
-		my $query = "";
-		if($columnName) {
-			$query = "select count(*) from (select * from $tableName order by $columnName desc limit $checkDataForMaxRows) foo;";
-		} else {
-			$query = "select count(*) from (select * from $tableName limit $checkDataForMaxRows) foo;";
-		}
+		my $query = "select count(*) from $tableName";
 		my $server01Count = runCountQueryOnConn($query, $server01Conn);
 		my $server02Count = runCountQueryOnConn($query, $server02Conn);
+		#DEBUG!!!!!
+		print "Row count: server_1: $server01Count, server_2: $server02Count\n";
 		
 		my @columnsToSelectArray = getArrayBySql("select column_name from information_schema.columns where table_name = '$tableName' AND TABLE_SCHEMA='$dbName'",$server01Conn);
 		for my $c (0..$#columnsToSelectArray) {
@@ -108,7 +105,7 @@ sub dbCheckValues {
 			print "INFO: Detected a difference in the number of rows in the table: $tableName: Server 01: $server01Count rows, Server 02: $server02Count rows\n";
 			$query .= "";
 		}elsif( ($server01Count == $server02Count) && ($server01Count > $checkDataForMaxRows) ) {
-			print "WARNINGS: In the table $tableName is more then $checkDataForMaxRows rows\n";
+			print "WARNINGS: In the table $tableName is more than $checkDataForMaxRows rows\n";
 			$query .= " LIMIT $checkDataForMaxRows";
 		}elsif( ($server01Count == $server02Count) && ($server01Count <= $checkDataForMaxRows) ) {
 			$query .= "";
