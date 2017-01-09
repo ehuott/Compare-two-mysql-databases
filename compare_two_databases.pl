@@ -27,6 +27,10 @@ our $server01Instance = $config->{'server_1'}->{'instance_name'};
 our $server02Instance = $config->{'server_2'}->{'instance_name'};
 
 our $checkDataForMaxRows = 1000;
+if (defined $config->{'general'}->{'maxrows'}) {
+	$checkDataForMaxRows = $config->{'general'}->{'maxrows'};
+}
+
 our $showFullDiffreneces = 1;
 our $columnLenght = 60;
 
@@ -103,14 +107,15 @@ sub dbCheckValues {
 		
 		if($server01Count != $server02Count) {
 			print "INFO: Detected a difference in the number of rows in the table: $tableName: Server 01: $server01Count rows, Server 02: $server02Count rows\n";
-			$query .= "";
-		}elsif( ($server01Count == $server02Count) && ($server01Count > $checkDataForMaxRows) ) {
+		}
+		if($server01Count > $checkDataForMaxRows) {
 			print "WARNINGS: In the table $tableName is more than $checkDataForMaxRows rows\n";
 			$query .= " LIMIT $checkDataForMaxRows";
-		}elsif( ($server01Count == $server02Count) && ($server01Count <= $checkDataForMaxRows) ) {
-			$query .= "";
 		}
-		#print $query."\n";
+
+		#DEBUG!!!!!
+		print $query."\n";
+
 		my @dataServer01 = getArrayBySql($query, $server01Conn);
 		my @dataServer02 = getArrayBySql($query, $server02Conn);
 		
